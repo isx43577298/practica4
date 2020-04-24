@@ -1,0 +1,13 @@
+service httpd-bis
+{
+  disable          = no
+  type             = UNLISTED
+  socket_type      = stream
+  protocol         = tcp
+  wait             = no
+  redirect         = localhost 80
+  bind             = 127.0.0.1
+  port             = 2080
+  user             = nobody
+}
+

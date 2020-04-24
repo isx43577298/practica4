@@ -1,0 +1,13 @@
+service sshd-lo
+{
+  disable          = no
+  type             = UNLISTED
+  socket_type      = stream
+  protocol         = tcp
+  wait             = no
+  redirect         = localhost 22
+  bind             = 127.0.0.1
+  port             = 4022
+  user             = nobody
+}
+
