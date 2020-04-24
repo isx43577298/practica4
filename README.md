@@ -8,6 +8,8 @@ Gustavo Tello Beltran - M11SAD
 
 - Host exterior (docker hostA - xarxa net19)
 
+- Hosts exteriors ( docker hostA1,hostA2,hostB1,hostB2 i dmz1-5)
+
 ```
 # Xarxa net19
 [root@localhost IPTABLES]# docker network inspect net19 | grep Subnet
