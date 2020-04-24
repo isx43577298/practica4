@@ -37,6 +37,9 @@ Gustavo Tello Beltran - M11SAD
 * ESTABLISHED: el paquet seleccionat s'asocia amb altres paquets en una connexió establerta
 * INVALID: el paquet seleccionat no pot asociar-se a una connexió coneguda
 * NEW: el paquet seleccionat está creant una nova connexió o está formant part d'una connexió desconeguda
+* PREROUTING: conté els paquets que acaben d'entrar al sistema
+* POSTROUTING: conté els paquets que acaben d'abandonar el sistema
+
 
 ### Exemple 1
 
@@ -436,9 +439,13 @@ pipe 4
 
 
 # xarxaA accedir port 2013 de totes les xarxes d'internet excepte de la xarxa xarxaB
+[root@hostA docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 08:33:31 UTC 2020
+Connection closed by foreign host.
 
-
-# evitar que es falsifiqui la ip de origen: SPOOFING
 
 ```
 
@@ -448,7 +455,38 @@ pipe 4
     * ports del router/firewall que porten a hosts de la lan
     * port forwarding també en funció de la ip origen
 
+```
+[root@hostA1 docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
 
+[root@hostB1 docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+# Al fer un telnet del hostA2 al host principal a un dels ports asociats els redirigeix al serei daytime(13) del host de la xarxa interna indicada
+[root@hostA2 docker]# telnet 192.168.0.12 5001
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 08:49:28 UTC 2020
+Connection closed by foreign host.
+
+[root@hostA2 docker]# telnet 192.168.0.12 5002
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 08:49:47 UTC 2020
+Connection closed by foreign host.
+
+[root@hostA2 docker]# telnet 192.168.0.12 5003
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 08:50:13 UTC 2020
+Connection closed by foreign host.
+
+```
 
  * **ip-08-dmz.sh**
 
@@ -464,21 +502,235 @@ pipe 4
     * (5) s'habiliten els ports 4001 en endavant per accedir per ssh als ports ssh de: 
       hostA1(4001), hostA2(4002), hostB1(4003), hostB2(4004).
     * (6) s'habilita el port 4000 per accedir al port ssh del router/firewal si la ip origen és 
-      del host i26.
+      del hostA1.
     * (7) els hosts de la xarxaB tenen accés a tot arreu excepte a la xarxaA.
 
 
 ```
 docker network create netA netB netZ
-docker run --rm --name hostA1 -h hostA1 --net netA --privileged -d edtasixm11/net18:nethost
-docker run --rm --name hostA2 -h hostA2 --net netA --privileged -d edtasixm11/net18:nethost
-docker run --rm --name hostB1 -h hostB1 --net netB --privileged -d edtasixm11/net18:nethost
-docker run --rm --name hostB2 -h hostB2 --net netB --privileged -d edtasixm11/net18:nethost
-docker run --rm --name dmz1 -h dmz1 --net netDMZ --privileged -d edtasixm11/net18:nethost
-docker run --rm --name dmz2 -h dmz2 --net netDMZ --privileged -d edtasixm06/ldapserver:18group
-docker run --rm --name dmz3 -h dmz3 --net netDMZ --privileged -d edtasixm11/k18:kserver
-docker run --rm --name dmz4 -h dmz4 --net netDMZ --privileged -d edtasixm06/samba:18detach
-docker run --rm --name dmz5 -h dmz5 --net netDMZ --privileged -d edtasixm11/tls18:ldaps
+docker run --rm --name hostA1 -h hostA1 --net netA --privileged -d isx43577298/net19:nethost
+docker run --rm --name hostA2 -h hostA2 --net netA --privileged -d isx43577298/net19:nethost
+docker run --rm --name hostB1 -h hostB1 --net netB --privileged -d isx43577298/net19:nethost
+docker run --rm --name hostB2 -h hostB2 --net netB --privileged -d isx43577298/net19:nethost
+docker run --rm --name dmz1 -h dmz1 --net netDMZ --privileged -d isx43577298/net19:nethost
+docker run --rm --name dmz2 -h dmz2 --net netDMZ --privileged -d isx43577298/net19:nethost
+docker run --rm --name dmz3 -h dmz3 --net netDMZ --privileged -d isx43577298/net19:nethost
+docker run --rm --name dmz4 -h dmz4 --net netDMZ --privileged -d isx43577298/net19:nethost
+docker run --rm --name dmz5 -h dmz5 --net netDMZ --privileged -d isx43577298/net19:nethost
+
+# de la xarxaA només es pot accedir del router/fireall als serveis: ssh i  daytime(13)
+[root@hostA1 docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 08:56:22 UTC 2020
+Connection closed by foreign host.
+
+[root@hostA1 docker]# telnet 192.168.0.12 22
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+
+[root@hostA1 docker]# telnet 192.168.0.12 7
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+
+# de la xarxaA només es pot accedir a l'exterior als serveis web,  ssh  i daytime(2013)
+[root@hostA1 docker]# telnet 192.168.0.12 2013
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 08:58:54 UTC 2020
+Connection closed by foreign host.
+
+[root@hostA1 docker]# telnet 192.168.0.12 22
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+telnet> quit
+
+
+[root@hostA docker]# telnet 192.168.0.12 80
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+GET / HTTP/1.0
+
+HTTP/1.1 403 Forbidden
+Date: Wed, 22 Apr 2020 15:47:18 GMT
+Server: Apache/2.4.34 (Fedora)
+Last-Modified: Fri, 20 Jul 2018 10:43:23 GMT
+ETag: "122a-5716bf70088c0"
+Accept-Ranges: bytes
+Content-Length: 4650
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+@isx43577298 ASIX M11-SAD
+Connection closed by foreign host.
+
+# de la xarxaA només es pot accedir dels serveis que ofereix la DMZ al servei web
+[root@hostA1 docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+[root@hostA1 docker]# telnet 192.168.0.12 7
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+[root@hostA1 docker]# telnet 192.168.0.12 22
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+[root@hostA docker]# telnet 192.168.0.12 80
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+GET / HTTP/1.0
+
+HTTP/1.1 403 Forbidden
+Date: Wed, 22 Apr 2020 15:47:18 GMT
+Server: Apache/2.4.34 (Fedora)
+Last-Modified: Fri, 20 Jul 2018 10:43:23 GMT
+ETag: "122a-5716bf70088c0"
+Accept-Ranges: bytes
+Content-Length: 4650
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+@isx43577298 ASIX M11-SAD
+Connection closed by foreign host.
+
+
+# redirigir els ports perquè des de l'exterior es tingui accés a: 3001->hostA1:80,
+# 3002->hostA2:2013, 3003->hostB1:2080,3004->hostB2:3013
+
+
+[root@hostB1 docker]# telnet 192.168.0.12 3002
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 09:07:21 UTC 2020
+Connection closed by foreign host.
+
+[root@hostA1 docker]# telnet 192.168.0.12 3004
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 09:08:03 UTC 2020
+Connection closed by foreign host.
+
+
+# s'habiliten els ports 4001 en endavant per accedir per ssh als ports ssh de:
+# hostA1(4001), hostA2(4002), hostB1(4003), hostB2(4004)
+
+[root@localhost IPTABLES]# telnet 192.168.0.12 4001
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+telnet> quit
+
+[root@localhost IPTABLES]# telnet 192.168.0.12 4002
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+telnet> quit
+
+[root@localhost IPTABLES]# telnet 192.168.0.12 4003
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+telnet> quit
+
+[root@localhost IPTABLES]# telnet 192.168.0.12 4004
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+telnet> quit
+
+
+# s'habilita el port 4000 per accedir al port ssh del router/firewal si la ip origen és del hostA1.
+
+[root@hostA1 docker]# telnet 192.168.0.12 4000
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_7.6
+^]
+telnet> quit
+
+
+[root@hostA2 docker]# telnet 192.168.0.12 4000
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+[root@hostB1 docker]# telnet 192.168.0.12 4000
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+[root@dmz1 docker]# telnet 192.168.0.12 4000
+Trying 192.168.0.12...
+telnet: connect to address 192.168.0.12: Connection refused
+
+
+
+# els hosts de la xarxaB tenen accés a tot arreu excepte a la xarxaA.
+
+[root@hostB1 docker]# telnet 172.20.0.1 13
+Trying 172.20.0.1...
+Connected to 172.19.0.1.
+Escape character is '^]'.
+Fri Apr 24 09:15:49 UTC 2020
+Connection closed by foreign host.
+
+[root@hostB1 docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 09:16:24 UTC 2020
+Connection closed by foreign host.
+
+[root@hostB1 docker]# telnet 172.21.0.1 7
+Trying 172.21.0.1...
+Connected to 172.21.0.1.
+Escape character is '^]'.
+holaadeu
+holaadeu
+
+
+[root@hostB1 docker]# telnet 172.19.0.1 7
+Trying 172.19.0.1...
+
+^C
+
+
+[root@hostB1 docker]# telnet 172.19.0.1 13
+Trying 172.19.0.1...
+
+
+^C
+
+[root@hostB1 docker]# telnet 172.19.0.1 22
+Trying 172.19.0.1...
+
+^C
+
+
+
+
 ```
 
  * **ip-09-dmz2.sh**
@@ -494,16 +746,43 @@ docker run --rm --name dmz5 -h dmz5 --net netDMZ --privileged -d edtasixm11/tls1
     * (3) des d'un host exterior muntar un recurs samba del servidor de la DMZ.
   
 ```
-ldapsearch -x -LLL  -h profen2i -b 'dc=edt,dc=org' dn
+[root@ldap docker]# ldapsearch -x -LLL -h profe2ni -b 'dc=edt,dc=org' dn | tail -n10
+dn: cn=profes,ou=grups,dc=edt,dc=org
+
+dn: cn=1wiaw,ou=grups,dc=edt,dc=org
+
+dn: cn=2wiaw,ou=grups,dc=edt,dc=org
+
+dn: cn=1asix,ou=grups,dc=edt,dc=org
+
+dn: cn=2asix,ou=grups,dc=edt,dc=org
+
 ldapsearch -x -LLL  -ZZ -h profen2i -b 'dc=edt,dc=org' dn 
     #(falta configurar certificat CA en el client)
 ldapsearch -x -LLL  -H  ldaps://profen2i -b 'dc=edt,dc=org' dn  
     #(falta configurar certificat CA en el client
 
-docker run --rm -it edtasixm11/k18:khost
-kinit anna
+docker run --rm -h k19 --name k19 -it edtasixm11/k18:khost
 
-smbclient //profen2i/public
+[root@k19 docker]# kinit anna
+Password for anna@EDT.ORG: 
+[root@k19 docker]# klist
+Ticket cache: KCM:0
+Default principal: anna@EDT.ORG
+
+Valid starting	    Expires    	       Service Principal
+24/04/20 09:31:46   25/04/20 09:31:45  krbtgt/EDT.ORG@EDT.ORG
+
+
+[root@dmz4 docker]# smbtree
+MYGROUP
+	\\DMZ4				Samba Server Version 4.7.10
+		\\DMZ4\IPC$		IPC Service (Samba Server Version 4.7.10)
+		\\DMZ4\public		Share de contingut public
+		\\DMZ4\manpages		Documentació man del container
+		\\DMZ4\documentation	Documentació doc del container
+
+
 ```
 
  * **ip-10-drop.sh**
@@ -511,19 +790,27 @@ smbclient //profen2i/public
     Configurar un host amb un firewall amb política drop per defecte
     input i output. Configurar el propi host d'alumne, no actua com a router.
 
-    A tenir en compte en el DROP:
-    * dns 53
-    * dhclient (68)
-    * ssh (22)
-    * rpc 111, 507
-    * chronyd 123, 371
-    * cups 631
-    * xinetd 3411
-    * postgresql 5432
-    * x11forwarding 6010, 6011
-    * avahi 368
-    * alpes 462
-    * tcpnethaspsrv 475
-    * rxe 761
+
+```
+[root@hostB1 docker]# telnet 192.168.0.12 13
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+Fri Apr 24 09:38:14 UTC 2020
+Connection closed by foreign host.
+
+[root@hostB1 docker]# telnet 192.168.0.12 7
+Trying 192.168.0.12...
+Connected to 192.168.0.12.
+Escape character is '^]'.
+hola host
+hola host
+
+[root@hostB1 docker]# telnet 192.168.0.12 80
+Trying 192.168.0.12...
 
 
+
+^C
+
+```

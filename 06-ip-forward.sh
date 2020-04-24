@@ -2,7 +2,7 @@
 # @isx43577298 ASIX M11-SAD Curs 2020
 # iptables
 
-#echo 1 > /proc/sys/ipv4/ip_forward
+echo 1 > /proc/sys/ipv4/ip_forward
 
 # Regles flush
 iptables -F
